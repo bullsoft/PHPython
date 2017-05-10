@@ -12,3 +12,4 @@ EOD;
 $python = new Python();
 $python->eval($code);
 var_dump($python->extract("b"));
+var_dump($python->call('json.dumps(b)'));
