@@ -26,15 +26,29 @@ extern "C" {
         Php::Class<Master> master("python");
 
         master.method<&Master::print>("print", {
-            Php::ByVal("string", Php::Type::String)
+            Php::ByVal("name", Php::Type::String)
           });
 
         master.method<&Master::eval>("eval", {
-            Php::ByVal("string", Php::Type::String)
+            Php::ByVal("statements", Php::Type::String)
               });
 
-        master.method<&Master::var>("var", {
-            Php::ByVal("string", Php::Type::String)
+        master.method<&Master::extract>("extract", {
+            Php::ByVal("name", Php::Type::String)
+              });
+
+        master.method<&Master::assign>("assign", {
+            Php::ByVal("name", Php::Type::String),
+            Php::ByVal("value", Php::Type::Null),
+              });
+
+        master.method<&Master::def>("def", {
+            Php::ByVal("name", Php::Type::String),
+            Php::ByVal("func", Php::Type::Callable),
+              });
+
+        master.method<&Master::call>("call", {
+            Php::ByVal("callFucn", Php::Type::String)
               });
 
         // add all classes to the extension
