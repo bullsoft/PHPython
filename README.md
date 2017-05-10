@@ -4,7 +4,8 @@ An extension to eval python codes in PHP
 ## Requirements
    - pybind11 V2.1.1
    - PHP-CPP-LEGACY V1.5.7
-   - PHP 5.6
+   - PHP 5
+   - Python 3
 
 
 ## Example
