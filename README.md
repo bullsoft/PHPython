@@ -6,6 +6,7 @@ An extension to eval python codes in PHP
    - PHP-CPP-LEGACY V1.5.7
    - PHP 5
    - Python 3
+   - C++ 11
 
 
 ## Example
