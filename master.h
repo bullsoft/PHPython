@@ -64,11 +64,15 @@ private:
       }
     }
 
-
-    /* void evalFile(Php::Parameters &params) { */
-    /*   std::string filePath = params[0]; */
-    /*   py::eval_file(filePath, _scope, _local); */
-    /* } */
+    void evalFile(Php::Parameters &params) {
+      std::string filePath = params[0];
+      try {
+        py::eval_file(filePath, *_scope);
+      }
+      catch(py::error_already_set& ex) {
+        throw Php::Exception(ex.what());
+      }
+    }
 
     void eval(Php::Parameters &params) {
       std::string state = params[0];

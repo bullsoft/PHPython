@@ -37,6 +37,10 @@ extern "C" {
             Php::ByVal("statements", Php::Type::String)
               });
 
+        master.method<&Master::evalFile>("evalFile", {
+            Php::ByVal("filePath", Php::Type::String)
+              });
+
         master.method<&Master::extract>("extract", {
             Php::ByVal("name", Php::Type::String)
               });
