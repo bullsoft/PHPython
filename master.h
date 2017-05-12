@@ -21,6 +21,7 @@ class Master : public Php::Base
 private:
     py::module _main;
     py::module _json;
+    py::module _sys;
     py::dict *_scope;
     py::dict *_local;
 
@@ -46,6 +47,23 @@ private:
       //delete _local;
       //PyEval_ReleaseLock();
     }
+
+    /**
+     *  php "constructor"
+     *  @param  params
+     */
+    void __construct(Php::Parameters &params)
+    {
+      if (!params.empty()) {
+        Php::Value argv = params[0];
+        auto dumps = _json.attr("dumps");
+        auto loads = _json.attr("loads");
+        std::string ret = Php::call("json_encode", argv);
+        _sys = py::module::import("sys");
+        _sys.attr("argv") = loads(py::str(ret));
+      }
+    }
+
 
     /* void evalFile(Php::Parameters &params) { */
     /*   std::string filePath = params[0]; */

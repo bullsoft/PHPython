@@ -25,6 +25,10 @@ extern "C" {
         // we have to class - master
         Php::Class<Master> master("python");
 
+        master.method<&Master::__construct>("__construct", {
+            Php::ByRef("argv", Php::Type::Array, false)
+          });
+
         master.method<&Master::print>("print", {
             Php::ByVal("name", Php::Type::String)
           });

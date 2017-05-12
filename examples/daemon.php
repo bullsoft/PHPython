@@ -1,4 +1,6 @@
 <?php
+dl('python.so');
+
 $code = <<<EOD
 import os
 import sys
@@ -6,7 +8,6 @@ import sys
 import atexit
 import signal
 
-sys.argv = argv
 print(sys.argv)
 
 def daemonize(pidfile, *, stdin="/dev/null",
@@ -97,8 +98,7 @@ if __name__ == "__main__":
 
 EOD;
 
-$python = new Python();
-$python->assign("argv", $argv);
+$python = new Python($argv);
 
 try {
     $python->eval($code);
