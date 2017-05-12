@@ -42,8 +42,8 @@ private:
      *  Destructor
      */
     ~Master() {
-      //delete _local;
       delete _scope;
+      //delete _local;
       //PyEval_ReleaseLock();
     }
 
@@ -54,7 +54,12 @@ private:
 
     void eval(Php::Parameters &params) {
       std::string state = params[0];
-      py::eval<py::eval_statements>(state, *_scope);
+      try {
+        py::eval<py::eval_statements>(state, *_scope);
+      }
+      catch (py::error_already_set& ex) {
+          throw Php::Exception(ex.what());
+      }
     }
 
     void assign(Php::Parameters &params) {
