@@ -1,5 +1,5 @@
 <?php
-dl('python.so');
+//dl('python.so');
 
 $a = ["a" => "b", "c" => "d"];
 

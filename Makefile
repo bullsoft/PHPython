@@ -85,7 +85,7 @@ LINKER				=	g++
 #	with a list of all flags that should be passed to the linker.
 #
 
-COMPILER_FLAGS		=	-Wall -c -O2 -std=c++11 $(shell python3-config --cflags) -fpic -o
+COMPILER_FLAGS		=	-Wall -I/usr/local/include/ -c -O2 -std=c++11 $(shell python3-config --cflags) -fpic -o 
 LINKER_FLAGS		=	-shared -undefined dynamic_lookup
 LINKER_DEPENDENCIES	=	-lphpcpp $(shell python3-config --ldflags)
 

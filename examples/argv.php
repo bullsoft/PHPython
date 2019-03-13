@@ -1,5 +1,5 @@
 <?php
-dl("python.so");
+//dl("python.so");
 
 $code = <<<EOD
 import sys
