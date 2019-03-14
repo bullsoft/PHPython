@@ -24,7 +24,6 @@ private:
   py::module _sys;
   py::dict *_scope;
   py::dict *_local;
-  std::map<std::string, py::module> _modules;
 
 public:
   /**
@@ -40,8 +39,8 @@ public:
     _scope = new py::dict(_main.attr("__dict__"));
     _local = _scope;
 
-    _modules["sys"] = _sys;
-    _modules["json"] = _json;
+    _main.attr("json") = _json;
+    _main.attr("sys") = _sys;
   }
 
   /**
@@ -83,13 +82,6 @@ public:
     }
   }
 
-  void loadModule(Php::Parameters &params) {
-    const char* name = params[0];
-    if(_modules.find(name) == _modules.end()) {
-      _modules[name] = py::module::import(name);
-    }
-  }
-
   void assign(Php::Parameters &params) {
     std::string name = params[0];
     (*_local)[py::str(name)] = phpVal2PyObj(params[1]);
@@ -98,16 +90,17 @@ public:
   Php::Value call(Php::Parameters &params) {
     // Python函数执行结果
     py::object pyRet;
+    py::object func;
     // 第1个参数为被调用的函数名，形式为：
     // 1) "print"
     // 2) ["os", "rename"]
     if (params[0].isString())  {
-      std::string callFunc = params[0];
-      pyRet = py::eval(callFunc, *_scope);
-      if (params.size() > 1 && params[1].isString()) {
-        std::string pyVar = params[1];
-        (*_local)[py::str(pyVar)] = pyRet;
-        return nullptr;
+      const char* funcStr = params[0];
+      if ((*_scope).contains(funcStr) && !(*_scope)[funcStr].is_none()) {
+        func = _main.attr(funcStr);
+      } else {
+        pyRet = py::eval(funcStr, *_scope);
+        return pyObj2PhpVal(pyRet);
       }
     } else if(params[0].isArray()){
       Php::Value array = params[0];
@@ -115,44 +108,88 @@ public:
       const char* mName = moduleFunc["0"];
       const char* fName = moduleFunc["1"];
       // 模块是否已加载
-      if(_modules.find(mName) == _modules.end()) {
-        _modules[mName] = py::module::import(mName);
+      if ((*_scope).contains(mName) && !(*_scope)[mName].is_none()) {
+        // nothing
+        // std::cout << mName << " alread loaded in _main" << std::endl;
+      } else {
+        (*_scope)[mName] = py::module::import(mName);
       }
+      func = (*_local)[mName].attr(fName);
+    }
+    // 构建Python参数
+    py::tuple pyParams;
+    if (params.size() > 1) {
+      pyParams = makeArgs(params[1]);
+    } else {
+      pyParams = py::tuple(0);
+    }
+    pyRet = func(*pyParams);
 
-      // 构建Python参数
-      py::tuple pyParams;
-      if (params.size() > 1 && params[1].isArray()) {
-        auto pyArgs = params[1];
-        pyParams = py::tuple(pyArgs.length());
-        for (auto &iter : pyArgs) {
-          bool isPyLocalArg = false;
-          if (iter.second.isString()) {
-            std::string pyLocalArgStr = iter.second;
-            if(pyLocalArgStr.rfind("py::", 0) == 0) {
-              std::string pyLocalArgName = pyLocalArgStr.substr(4);
-              py::object pyLocalArg = (*_local)[py::str(pyLocalArgName)];
-              pyParams[iter.first.numericValue()] = pyLocalArg;
-              isPyLocalArg = true;
-            }
-          }
-          // 在作用域中未找到相关变量，当作字符串处理
-          if (isPyLocalArg == false) {
-            pyParams[iter.first.numericValue()] = phpVal2PyObj(iter.second);
-          }
+    if(params.size() > 2 && params[2].isString()) {
+      std::string pyVar = params[2];
+      (*_local)[py::str(pyVar)] = pyRet;
+      return nullptr;
+    }
+
+    return pyObj2PhpVal(pyRet);
+  }
+
+  Php::Value __call(const char *name, Php::Parameters &params)
+  {
+    std::string funcName = std::string(name);
+    size_t index = 0;
+    py::tuple pyArgs = py::tuple(params.size());
+
+    for (auto iter : params) {
+      if (iter.isString()) {
+        std::string pyLocalArgStr = iter;
+        if(pyLocalArgStr.rfind("py::", 0) == 0) {
+          std::string pyLocalArgName = pyLocalArgStr.substr(4);
+          py::object pyLocalArg = (*_local)[py::str(pyLocalArgName)];
+          pyArgs[index++] = pyLocalArg;
+        } else {
+          pyArgs[index++] = py::str(pyLocalArgStr);
         }
       } else {
-        pyParams = py::tuple(0);
-      }
-      auto func = _modules[mName].attr(fName);
-      pyRet = func(*pyParams);
-
-      if(params.size() > 2 && params[2].isString()) {
-        std::string pyVar = params[2];
-        (*_local)[py::str(pyVar)] = pyRet;
-        return nullptr;
+        pyArgs[index++] = phpVal2PyObj(iter);
       }
     }
-    return pyObj2PhpVal(pyRet);
+    auto func = (*_local)[py::str(funcName)];
+    return pyObj2PhpVal(func(*pyArgs));
+  }
+
+  py::tuple makeArgs(Php::Value phpArgs) {
+    size_t index = 0;
+    if(phpArgs.isArray()) {
+      auto pyParams = py::tuple(phpArgs.size());
+      for (auto &iter : phpArgs) {
+        if (iter.second.isString()) {
+          std::string pyLocalArgStr = iter.second;
+          if(pyLocalArgStr.rfind("py::", 0) == 0) {
+            std::string pyLocalArgName = pyLocalArgStr.substr(4);
+            py::object pyLocalArg = (*_local)[py::str(pyLocalArgName)];
+            pyParams[index++] = pyLocalArg;
+          } else {
+            pyParams[index++] = py::str(pyLocalArgStr);
+          }
+        } else {
+          pyParams[index++] = phpVal2PyObj(iter.second);
+        }
+      }
+      return pyParams;
+    } else if(phpArgs.isString()) {
+      auto pyParams = py::tuple(1);
+      std::string pyLocalArgStr = phpArgs;
+      if(pyLocalArgStr.rfind("py::", 0) == 0) {
+        std::string pyLocalArgName = pyLocalArgStr.substr(4);
+        py::object pyLocalArg = (*_local)[py::str(pyLocalArgName)];
+        pyParams[index++] = pyLocalArg;
+      }  else {
+        pyParams[index++] = py::str(pyLocalArgStr);
+      }
+      return pyParams;
+    }
+    return py::tuple(0);
   }
 
   py::object phpVal2PyObj(Php::Value val) {
@@ -171,29 +208,34 @@ public:
     const char *name = params[0];
     Php::Value func = params[1];
     _main.def(name, [func, this](py::args args, py::kwargs kwargs) {
-                      auto json_encode = this->_json.attr("dumps");
-                      auto json_decode = this->_json.attr("loads");
-                      std::string a = json_encode(args).cast<std::string>();
-                      Php::Value  b = Php::call("json_decode", a, true);
-                      std::string ret = Php::call("json_encode", func(b));
-                      return json_decode(py::str(ret));
+                      return phpVal2PyObj(func(pyObj2PhpVal(args)));
                     });
   }
 
   Php::Value extract(Php::Parameters &params) {
     if (params.size() != 1) throw Php::Exception("Invalid number of parameters supplied");
     std::string name = params[0];
-    //auto json_encode = _json.attr("dumps");
     py::object val = (*_local)[py::str(name)];
-    //std::string a = json_encode(val).cast<std::string>();
-    //return Php::call("json_decode", a, true);
     return pyObj2PhpVal(val);
   }
 
+  void dump(Php::Parameters &params) {
+    py::print(*_local);
+  }
+
   void print(Php::Parameters &params) {
-    if (params.size() != 1) throw Php::Exception("Invalid number of parameters supplied");
-    std::string v = params[0];
-    py::print((*_local)[py::str(v)]);
+    if(params.size() == 1) {
+      std::string v = params[0];
+      py::print((*_local)[py::str(v)]);
+    } else {
+      auto pyParams = py::tuple(params.size());
+      size_t index = 0;
+      for (auto iter : params) {
+        std::string v = iter;
+        pyParams[index++] = (*_local)[py::str(v)];
+      }
+      py::print(pyParams);
+    }
   }
 
   /**

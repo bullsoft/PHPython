@@ -34,45 +34,42 @@ extern "C" {
     master.method<&Master::print>
       ("print",
        {
-        Php::ByVal("name", Php::Type::String)
+        Php::ByVal("name", Php::Type::String, true)
        });
+
+    master.method<&Master::dump>
+      ("dump", {});
 
     master.method<&Master::eval>
       ("eval",
        {
-        Php::ByVal("statements", Php::Type::String)
+        Php::ByVal("statements", Php::Type::String, true)
        });
 
     master.method<&Master::evalFile>
       ("evalFile",
        {
-        Php::ByVal("filePath", Php::Type::String)
+        Php::ByVal("filePath", Php::Type::String, true)
        });
-
-    master.method<&Master::loadModule>
-      ("loadModule",
-       {
-        Php::ByVal("name", Php::Type::String)
-      });
 
     master.method<&Master::extract>
       ("extract",
        {
-        Php::ByVal("name", Php::Type::String)
+        Php::ByVal("name", Php::Type::String, true)
        });
 
     master.method<&Master::assign>
       ("assign",
        {
-        Php::ByVal("name", Php::Type::String),
-        Php::ByVal("value", Php::Type::Null),
+        Php::ByVal("name", Php::Type::String, true),
+        Php::ByVal("value", Php::Type::Null, true),
        });
 
     master.method<&Master::def>
       ("def",
        {
-        Php::ByVal("name", Php::Type::String),
-        Php::ByVal("func", Php::Type::Callable),
+        Php::ByVal("name", Php::Type::String, true),
+        Php::ByVal("func", Php::Type::Callable, true),
        });
 
     master.method<&Master::call>

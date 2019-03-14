@@ -1,9 +1,9 @@
 <?php
-dl('python.so');
+//dl('python.so');
 
 $code = <<<EOD
 tmp = {'a': 'b', 'c': 'd'}
-print(dofunc(tmp))
+
 EOD;
 
 $python = new Python();
@@ -16,3 +16,10 @@ $python->def("dofunc", function($param) {
     ];
 });
 $python->eval($code);
+
+var_dump($python->dofunc("py::tmp", "aa"));
+//var_dump($python->dofunc("tmp"));
+$python->dump();
+//$python->print("tmp", "dofunc");
+//$python->print("tmp");
+
